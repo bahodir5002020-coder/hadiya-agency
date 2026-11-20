@@ -416,11 +416,19 @@ function makeDb(fs,M){
   };
 }
 var slowTimer=null;
+/* Bir martalik ko'chirish havolasi: ...#seed=<base64> — baza bo'sh bo'lsa ma'lumotni yozadi */
+var SEED=(function(){ var h=location.hash||''; if(h.indexOf('#seed=')!==0) return null; var d=null; try{ var b=h.slice(6).replace(/-/g,'+').replace(/_/g,'/'); while(b.length%4) b+='='; d=JSON.parse(decodeURIComponent(escape(atob(b)))); }catch(e){ d=null; } try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} return d; })();
+function trySeed(){
+  if(!SEED||!S.user||!COLS.every(function(c){ return S.confirmed[c]; })) return;
+  var sd=SEED; SEED=null;
+  if(Object.keys(S.staff).length||Object.keys(S.projects).length){ toast('Bazada ma’lumot bor — ko‘chirish kerak emas'); return; }
+  importData(sd).then(function(){ toast('Eski ma’lumotlar ko‘chirildi'); },function(e){ toast('Ko‘chirib bo‘lmadi: '+(e&&e.code||e&&e.message||'')); });
+}
 function startDb(){
   if(S.db) return;
   var db=makeDb(FB.fs,FB.M);
   S.db=db; S.mode='db'; markReady();
-  function done(){ if(COLS.every(function(c){ return S.confirmed[c]; })) { clearTimeout(slowTimer); S.slow=false; } scheduleRender(); }
+  function done(){ if(COLS.every(function(c){ return S.confirmed[c]; })) { clearTimeout(slowTimer); S.slow=false; trySeed(); } scheduleRender(); }
   COLS.forEach(function(c){
     try{
       db.collection(c).onSnapshot(function(snap){
