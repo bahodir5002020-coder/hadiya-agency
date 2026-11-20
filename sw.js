@@ -1,8 +1,8 @@
 /* Hadiya Agency — ilova qobig'ini telefonda saqlab, darhol ochish uchun */
-var V = 'ha-v1';
+var V = 'ha-v2';
 var CORE = ['./', './index.html', './fb.mjs', './manifest.webmanifest', './icons/icon-180.png', './icons/icon-192.png'];
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(V).then(function (c) { return c.addAll(CORE); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(V).then(function (c) { return c.addAll(CORE.map(function (u) { return new Request(u, { cache: 'no-cache' }); })); }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) {
@@ -18,7 +18,8 @@ self.addEventListener('fetch', function (e) {
     e.respondWith(caches.open(V).then(function (c) {
       var key = req.mode === 'navigate' ? './index.html' : req;
       return c.match(key, { ignoreSearch: true }).then(function (hit) {
-        var net = fetch(req).then(function (r) { if (r && r.ok) c.put(key, r.clone()); return r; }).catch(function () { return hit; });
+        /* no-cache: brauzer keshini chetlab, server bilan tekshiradi (o'zgarmagan bo'lsa 304 — tez) */
+        var net = fetch(req.mode === 'navigate' ? './index.html' : req.url, { cache: 'no-cache' }).then(function (r) { if (r && r.ok) c.put(key, r.clone()); return r; }).catch(function () { return hit; });
         return hit || net;
       });
     }));
